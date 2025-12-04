@@ -12,7 +12,8 @@ services:
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_PORT=${POSTGRES_PORT}
       - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=False
+      - DEBUG=True
+      - ALLOWED_HOSTS=*
     expose:
       - "8000"
     volumes:
