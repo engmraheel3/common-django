@@ -1,0 +1,98 @@
+name: CI Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set image tags
+        id: tags
+        run: |
+          echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+          echo "SHORT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-hello:${{ env.BRANCH }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-hello:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-hello:${{ env.SHORT_SHA }}
+
+      - name: Prepare server directories
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_SSH_HOST }}
+          username: ${{ secrets.DO_SSH_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          port: ${{ secrets.DO_SSH_PORT }}
+          script: |
+            mkdir -p /home/${{ secrets.DO_SSH_USER }}/deploy/fastapi-hello/nginx
+
+      - name: Copy deployment files to server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.DO_SSH_HOST }}
+          username: ${{ secrets.DO_SSH_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          port: ${{ secrets.DO_SSH_PORT }}
+          source: "docker-compose.yml,nginx/nginx.conf"
+          target: "/home/${{ secrets.DO_SSH_USER }}/deploy/fastapi-hello/"
+          strip_components: 0
+
+      - name: Deploy with Docker Compose
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.DO_SSH_HOST }}
+          username: ${{ secrets.DO_SSH_USER }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          port: ${{ secrets.DO_SSH_PORT }}
+          script: |
+            set -e
+            cd /home/${{ secrets.DO_SSH_USER }}/deploy/fastapi-hello
+            
+            # Verify files exist
+            echo "Checking files..."
+            ls -la
+            ls -la nginx/
+            
+            # Export environment variables
+            export DOCKERHUB_REPO="${{ secrets.DOCKERHUB_USERNAME }}/fastapi-hello"
+            export IMAGE_TAG="${{ env.BRANCH }}"
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            export SECRET_KEY="${{ secrets.SECRET_KEY }}"
+            POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+            POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+            POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            POSTGRES_HOST="${{ secrets.POSTGRES_HOST }}"
+            POSTGRES_PORT="${{ secrets.POSTGRES_PORT }}"
+            
+            echo "Pulling images..."
+            docker compose pull
+            
+            echo "Starting services..."
+            docker compose up -d --remove-orphans
+            
+            echo "Cleaning up..."
+            docker system prune -f
+            
+            echo "Service status:"
+            docker compose ps
+            
+            echo "✅ Deployment completed successfully!"
