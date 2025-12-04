@@ -31,9 +31,9 @@ jobs:
           context: ./app
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-hello:${{ env.BRANCH }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-hello:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/fastapi-hello:${{ env.SHORT_SHA }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/mysite:${{ env.BRANCH }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/mysite:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/mysite:${{ env.SHORT_SHA }}
 
       - name: Prepare server directories
         uses: appleboy/ssh-action@v0.1.7
@@ -43,8 +43,7 @@ jobs:
           key: ${{ secrets.DO_SSH_KEY }}
           port: ${{ secrets.DO_SSH_PORT }}
           script: |
-            mkdir -p /home/${{ secrets.DO_SSH_USER }}/deploy/fastapi-hello/nginx
-
+            mkdir -p /home/${{ secrets.DO_SSH_USER }}/deploy/mysite/nginx
       - name: Copy deployment files to server
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -53,7 +52,7 @@ jobs:
           key: ${{ secrets.DO_SSH_KEY }}
           port: ${{ secrets.DO_SSH_PORT }}
           source: "docker-compose.yml,nginx/nginx.conf"
-          target: "/home/${{ secrets.DO_SSH_USER }}/deploy/fastapi-hello/"
+          target: "/home/${{ secrets.DO_SSH_USER }}/deploy/mysite/"
           strip_components: 0
 
       - name: Deploy with Docker Compose
@@ -65,7 +64,7 @@ jobs:
           port: ${{ secrets.DO_SSH_PORT }}
           script: |
             set -e
-            cd /home/${{ secrets.DO_SSH_USER }}/deploy/fastapi-hello
+            cd /home/${{ secrets.DO_SSH_USER }}/deploy/mysite
             
             # Verify files exist
             echo "Checking files..."
@@ -73,7 +72,7 @@ jobs:
             ls -la nginx/
             
             # Export environment variables
-            export DOCKERHUB_REPO="${{ secrets.DOCKERHUB_USERNAME }}/fastapi-hello"
+            export DOCKERHUB_REPO="${{ secrets.DOCKERHUB_USERNAME }}/mysite"
             export IMAGE_TAG="${{ env.BRANCH }}"
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             export SECRET_KEY="${{ secrets.SECRET_KEY }}"
