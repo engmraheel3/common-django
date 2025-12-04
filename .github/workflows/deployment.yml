@@ -28,7 +28,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./app
+          context: ./mysite
+          file: ./mysite/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/mysite:${{ env.BRANCH }}
@@ -44,6 +45,7 @@ jobs:
           port: ${{ secrets.DO_SSH_PORT }}
           script: |
             mkdir -p /home/${{ secrets.DO_SSH_USER }}/deploy/mysite/nginx
+        
       - name: Copy deployment files to server
         uses: appleboy/scp-action@v0.1.4
         with:
