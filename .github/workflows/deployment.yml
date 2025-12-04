@@ -78,11 +78,11 @@ jobs:
             export IMAGE_TAG="${{ env.BRANCH }}"
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             export SECRET_KEY="${{ secrets.SECRET_KEY }}"
-            POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
-            POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
-            POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
-            POSTGRES_HOST="${{ secrets.POSTGRES_HOST }}"
-            POSTGRES_PORT="${{ secrets.POSTGRES_PORT }}"
+            export POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+            export POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+            export POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            export POSTGRES_HOST="${{ secrets.POSTGRES_HOST }}"
+            export POSTGRES_PORT="${{ secrets.POSTGRES_PORT }}"
             
             echo "Pulling images..."
             docker compose pull
